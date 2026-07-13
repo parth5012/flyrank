@@ -3,12 +3,22 @@ import express, { Express, Request, Response } from 'express';
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
 
+app.disable('x-powered-by');
 app.use(express.json());
 
 app.get('/', (req: Request, res: Response) => {
   res.json({
     message: 'Welcome to the minimal TypeScript API!',
     timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/api/info', (req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    uptime: process.uptime(),
+    platform: process.platform,
+    nodeVersion: process.version,
   });
 });
 
