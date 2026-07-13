@@ -1,0 +1,14 @@
+# Node.js dependencies
+node_modules/
+package-lock.json
+
+# Compiler output
+dist/
+
+# Local/Environment configs
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
