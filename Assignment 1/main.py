@@ -35,6 +35,24 @@ def create_task(task: dict):
     TASKS.append(new_task)
     return Response(status_code=201, content="Created")
 
+@app.put("/tasks/{task_id}")
+def update_task(task_id: int, task: dict):
+    if task.get("title") or task.get("done") is not None:
+        for i, t in enumerate(TASKS):
+            if t["id"] == task_id:
+                TASKS[i] = { "id": task_id, "title": task.get("title") if task.get("title") else t["title"], "done": task.get("done", False) }
+                return Response(status_code=200, content=TASKS[i])
+        return Response(status_code=404, content={ "error": "Task not found" })
+    return Response(status_code=400, content={ "error": "No valid fields to update" })
+
+@app.delete("/tasks/{task_id}")
+def delete_task(task_id: int):
+    for i, task in enumerate(TASKS):
+        if task["id"] == task_id:
+            del TASKS[i]
+            return Response(status_code=200, content="No Content")
+    return Response(status_code=404, content={ "error": "Task not found" })
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
