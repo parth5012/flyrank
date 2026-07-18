@@ -15,3 +15,4 @@ TASKS = [
         "done": False
     }
 ]
+next_id = len(TASKS) + 1
