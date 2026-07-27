@@ -9,7 +9,7 @@ def root():
     """Return API metadata and available endpoints."""
     return { "name": "Task API", "version": "1.0", "endpoints": ["/tasks"] }
 
-    
+
 @app.get("/health")
 def health():
     """Return the health status of the service."""

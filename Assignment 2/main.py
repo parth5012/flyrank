@@ -57,24 +57,28 @@ def create_task(task: dict, session: APISession):
     return Response(status_code=201, content="Created")
 
 @app.put("/tasks/{task_id}")
-def update_task(task_id: int, task: dict):
+def update_task(task_id: int, task: dict, session: APISession):
     """Update an existing task's title and/or done status by ID."""
-    if task.get("title") or task.get("done") is not None:
-        for i, t in enumerate(TASKS):
-            if t["id"] == task_id:
-                TASKS[i] = { "id": task_id, "title": task.get("title") if task.get("title") else t["title"], "done": task.get("done", False) }
-                return Response(status_code=200, content=TASKS[i])
+    
+    task_to_update = get_task_by_id(session, task_id)
+    if task_to_update is None:
         return Response(status_code=404, content={ "error": "Task not found" })
-    return Response(status_code=400, content={ "error": "No valid fields to update" })
+    if task.get("title"):
+        task_to_update.title = task["title"]
+    if task.get("done") is not None:
+        task_to_update.done = task["done"]
+    session.commit()
+    return task_to_update
 
 @app.delete("/tasks/{task_id}")
-def delete_task(task_id: int):
-    """Delete a task by its ID, or 404 if not found."""
-    for i, task in enumerate(TASKS):
-        if task["id"] == task_id:
-            del TASKS[i]
-            return Response(status_code=200, content="No Content")
-    return Response(status_code=404, content={ "error": "Task not found" })
+def delete_task(task_id: int, session: APISession):
+    """Delete a task by its ID, or 404 if not found."""    
+    task_to_delete = get_task_by_id(session, task_id)
+    if task_to_delete is None:
+        return Response(status_code=404, content={ "error": "Task not found" })
+    session.delete(task_to_delete)
+    session.commit()
+    return Response(status_code=200, content="No Content")
 
 if __name__ == "__main__":
     import uvicorn
