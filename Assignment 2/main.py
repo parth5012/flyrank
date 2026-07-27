@@ -1,9 +1,22 @@
 from fastapi import FastAPI
 from fastapi.responses import Response
+from contextlib import asynccontextmanager
 from db import create_db_and_tables, Session
-from models import Task
+from db.models import Task
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- STARTUP LOGIC ---
+    print("Uvicorn is starting up... triggering function now!")
+    create_db_and_tables()
+    
+    yield  # The application runs and handles requests while paused here
+    
+    # --- SHUTDOWN LOGIC ---
+    print("Uvicorn is shutting down... clean up connections here.")
+
+app = FastAPI(lifespan=lifespan)
+
 
 @app.get("/")
 def root():
@@ -62,6 +75,5 @@ def delete_task(task_id: int):
     return Response(status_code=404, content={ "error": "Task not found" })
 
 if __name__ == "__main__":
-    create_db_and_tables()
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
