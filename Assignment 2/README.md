@@ -20,6 +20,34 @@ This project is a lightweight starter/demo API — data is stored in memory (see
 - **FastAPI** — web framework
 - **Uvicorn** — ASGI server
 - **uv** — dependency & environment management
+- **SQLModel / SQLite** — ORM and database
+
+## Database Configuration
+
+The application uses **SQLite** as the database backend:
+
+- **Why SQLite was chosen**: SQLite was chosen for its simplicity, zero-configuration nature, and perfect fit for this single-file application. It's an in-process embedded database that's ideal for development and small-scale production.
+
+- **Database file location**: The SQLite database file `tasks.db` is stored in the project root directory (`D:\work\projects\flyrank\Assignment 2\`).
+
+- **Database schema**: The schema is auto-created using SQLAlchemy/SQLModel metadata and populated with sample data on first run. The database persists between application restarts.
+
+### Database Access
+
+The database is accessed through:
+- `db/engine.py` — Database engine configuration
+- `db/models.py` — Task model definition
+- `db/operations.py` — Query operations
+
+## Example SQL Query
+
+Here's an example SQL query that was executed:
+
+```sql
+SELECT * FROM tasks;
+```
+
+This retrieves all tasks from the database and was used in the database initialization to populate sample data.
 
 ## Project Structure
 
@@ -54,7 +82,7 @@ python -m venv .venv
 # source .venv/bin/activate   # macOS / Linux
 
 # Install dependencies
-pip install fastapi uvicorn
+pip install fastapi uvicorn sqlmodel
 
 # Run the server
 python main.py
