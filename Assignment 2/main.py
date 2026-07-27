@@ -2,7 +2,10 @@ from fastapi import FastAPI
 from fastapi.responses import Response
 from contextlib import asynccontextmanager
 from db import create_db_and_tables, Session
+from db.db import APISession
 from db.models import Task
+from db.operations import get_all_tasks, get_task_by_id
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,17 +33,17 @@ def health():
     return { "status": "ok" }
 
 @app.get("/tasks")
-def get_tasks():
+def get_tasks(session: APISession):
     """Return a list of all tasks."""
-    return TASKS
+    return get_all_tasks(session)
 
 @app.get("/tasks/{task_id}")
-def get_task(task_id: int):
+def get_task(task_id: int, session: APISession):
     """Return a single task by its ID, or 404 if not found."""
-    for task in TASKS:
-        if task["id"] == task_id:
-            return task
-    return Response(status_code=404,content={ "error": "Task 99 not found" })
+    task = get_task_by_id(session, task_id)
+    if task is None:
+        return Response(status_code=404, content={ "error": "Task not found" })
+    return task
 
 @app.post('/tasks')
 def create_task(task: dict):

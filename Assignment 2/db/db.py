@@ -11,7 +11,7 @@ def get_session():
     with Session(engine) as session:
         yield session
 
-session = Annotated[Session, Depends(get_session)]
+APISession = Annotated[Session, Depends(get_session)]
 
 
 def generate_fake_tasks(session: Session):
