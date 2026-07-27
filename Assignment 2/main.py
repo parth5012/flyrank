@@ -46,15 +46,14 @@ def get_task(task_id: int, session: APISession):
     return task
 
 @app.post('/tasks')
-def create_task(task: dict):
+def create_task(task: dict, session: APISession):
     """Create a new task from the provided title."""
-    global next_id
     title = task.get("title")
     if not title:
         return Response(status_code=400, content={ "error": "Title is required" })
-    new_task = { "id": next_id, "title": title, "done": False }
-    next_id += 1
-    TASKS.append(new_task)
+    new_task = Task(title=title)
+    session.add(new_task)
+    session.commit()
     return Response(status_code=201, content="Created")
 
 @app.put("/tasks/{task_id}")
