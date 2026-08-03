@@ -16,4 +16,10 @@ docker exec -it taskdb psql -U postgres -d tasks -c "\dt"
 
 
 ## Test tasks get endpoint
-curl -i http://localhost:8002/tasks
+curl -i http://localhost:3000/tasks
+
+## Run the project
+docker compose up --build -d
+
+## Stop the project
+docker compose down
