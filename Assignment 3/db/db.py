@@ -1,10 +1,8 @@
 from fastapi import Depends
 from typing_extensions import Annotated
-from sqlmodel import  Session, SQLModel
+from sqlmodel import  Session, SQLModel,select
 from db.engine import engine
 from db.models import Task,models
-from sqlmodel import select
-
 
 def get_session():
     """Dependency provider for database sessions."""

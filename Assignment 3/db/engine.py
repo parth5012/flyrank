@@ -1,10 +1,12 @@
 
 from sqlmodel import create_engine
+from dotenv import load_dotenv
+import os
 
-sqlite_file_name ="tasks.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+load_dotenv()
+url = os.getenv("DATABASE_URL",'')
 
 # check_same_thread=False is unique and required for SQLite
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
+connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
+engine = create_engine(url, connect_args=connect_args)
 
