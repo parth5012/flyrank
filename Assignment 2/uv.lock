@@ -34,7 +34,7 @@ wheels = [
 ]
 
 [[package]]
-name = "assignment-1"
+name = "assignment-2"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

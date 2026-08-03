@@ -13,3 +13,7 @@ docker ps
 docker inspect taskdb
 ## Check Tables in db instance
 docker exec -it taskdb psql -U postgres -d tasks -c "\dt"
+
+
+## Test tasks get endpoint
+curl -i http://localhost:8002/tasks
