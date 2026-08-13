@@ -5,6 +5,7 @@ from db import create_db_and_tables, Session
 from db.db import APISession
 from db.models import Task
 from db.operations import get_all_tasks, get_task_by_id
+from db.auth import sign_up, sign_in, sign_out
 
 
 @asynccontextmanager
@@ -12,9 +13,9 @@ async def lifespan(app: FastAPI):
     # --- STARTUP LOGIC ---
     print("Uvicorn is starting up... triggering function now!")
     create_db_and_tables()
-    
+
     yield  # The application runs and handles requests while paused here
-    
+
     # --- SHUTDOWN LOGIC ---
     print("Uvicorn is shutting down... clean up connections here.")
 
@@ -26,7 +27,7 @@ def root():
     """Return API metadata and available endpoints."""
     return { "name": "Task API", "version": "1.0", "endpoints": ["/tasks"] }
 
-    
+
 @app.get("/health")
 def health():
     """Return the health status of the service."""
@@ -59,7 +60,7 @@ def create_task(task: dict, session: APISession):
 @app.put("/tasks/{task_id}")
 def update_task(task_id: int, task: dict, session: APISession):
     """Update an existing task's title and/or done status by ID."""
-    
+
     task_to_update = get_task_by_id(session, task_id)
     if task_to_update is None:
         return Response(status_code=404, content={ "error": "Task not found" })
@@ -72,13 +73,37 @@ def update_task(task_id: int, task: dict, session: APISession):
 
 @app.delete("/tasks/{task_id}")
 def delete_task(task_id: int, session: APISession):
-    """Delete a task by its ID, or 404 if not found."""    
+    """Delete a task by its ID, or 404 if not found."""
     task_to_delete = get_task_by_id(session, task_id)
     if task_to_delete is None:
         return Response(status_code=404, content={ "error": "Task not found" })
     session.delete(task_to_delete)
     session.commit()
     return Response(status_code=200, content="No Content")
+
+@app.post("/auth/signup")
+def signup(user: dict):
+    try:
+        response = sign_up(**user)
+        if response.user:
+            return Response(status_code=201, content="No Content")
+        return Response(status_code=400, content=response)
+    except Exception as e:
+        return Response(status_code=500, content=str(e))
+
+@app.post("/auth/login")
+def login(user:dict):
+    try:
+        response = sign_in(**user)
+        if response.user:
+            content = {
+                "access_token": response.access_token,
+                "refresh_token": response.refresh_token
+            }
+            return Response(status_code=200, content=content)
+        return Response(status_code=400, content=response)
+    except Exception as e:
+        return Response(status_code=500, content=str(e))
 
 if __name__ == "__main__":
     import uvicorn
