@@ -5,7 +5,7 @@ from db import create_db_and_tables, Session
 from db.db import APISession
 from db.models import Task
 from db.operations import get_all_tasks, get_task_by_id
-from db.auth import sign_up, sign_in, sign_out
+from db.auth import sign_up, sign_in, sign_out, get_user
 import re
 from typing import Any
 
@@ -117,15 +117,18 @@ def protected_profile(headers: dict[Any,Any]):
     
     # Regex: Match "Bearer <token>" and capture the token
     match = re.match(r'^Bearer\s+(\S+)$', auth_header)
-    
+    err = Response(
+        status_code=401,
+        content='{"error": "Access token required"}',
+        media_type="application/json"
+    )
     if not match:
-        return Response(
-            status_code=401,
-            content='{"error": "Access token required"}',
-            media_type="application/json"
-        )
+        return err
     
     token = match.group(1)  # Extract the token
+    user = get_user(token)
+    if not user:
+        return err
     return Response(status_code=200, content="Welcome! This info is protected.")
 
 if __name__ == "__main__":
