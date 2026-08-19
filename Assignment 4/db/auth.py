@@ -27,5 +27,5 @@ def sign_in(email,password,**kwargs):
 def sign_out():
     return client.auth.sign_out()
 
-def get_user(token: str):
+def check_user(token: str):
     return client.auth.get_user(token)

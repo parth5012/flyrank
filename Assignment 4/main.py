@@ -1,11 +1,12 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI,Depends
 from fastapi.responses import Response
 from contextlib import asynccontextmanager
 from db import create_db_and_tables, Session
 from db.db import APISession
 from db.models import Task
 from db.operations import get_all_tasks, get_task_by_id
-from db.auth import sign_up, sign_in, sign_out, get_user
+from db.auth import sign_up, sign_in, sign_out
+from utils.dependencies import get_user
 import re
 from typing import Any
 
@@ -112,24 +113,13 @@ def public_info():
     return Response(status_code=200, content="Welcome stranger! This info is public.")
 
 @app.get("/protected/profile")
-def protected_profile(headers: dict[Any,Any]):
-    auth_header: str = str(headers.get("Authorization", ""))
-    
-    # Regex: Match "Bearer <token>" and capture the token
-    match = re.match(r'^Bearer\s+(\S+)$', auth_header)
-    err = Response(
-        status_code=401,
-        content='{"error": "Access token required"}',
-        media_type="application/json"
-    )
-    if not match:
-        return err
-    
-    token = match.group(1)  # Extract the token
-    user = get_user(token)
-    if not user:
-        return err
+def protected_profile(user = Depends(get_user)):
     return Response(status_code=200, content="Welcome! This info is protected.")
+
+@app.post("/auth/logout")
+def logout(user = Depends(get_user)):
+    sign_out()
+    return Response(status_code=204, content="")
 
 if __name__ == "__main__":
     import uvicorn
