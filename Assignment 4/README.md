@@ -1,84 +1,163 @@
-# Task API (Assignment 3)
+﻿# Task API (Assignment 4)
 
-A containerized RESTful **Task Management API** built with FastAPI and SQLModel. This assignment deploys the application with a PostgreSQL database backend using Docker Compose.
+A containerized RESTful **Task Management API** built with FastAPI and SQLModel, now with **JWT-based authentication and protected endpoints**. This assignment adds user authentication (sign-up, login, logout) with token-based access control using Supabase Auth.
 
-The API provides CRUD (Create, Read, Update, Delete) operations over a tasks table with automated database initialization and data seeding.
+The API provides CRUD (Create, Read, Update, Delete) operations over a tasks table, along with public and protected routes secured via Bearer token authentication.
 
 ## One-Command Run
 
 To start both the API and database services (rebuilding images and running in the background) with a single command:
 
-```bash
+\\\ash
 docker compose up --build -d
-```
+\\\
 
-## Environment Configuration (`.env.example`)
+## Environment Configuration (\.env.example\)
 
-The application can read environment variables from a `.env` file. You can configure your local settings by copying the provided example file:
+The application can read environment variables from a \.env\ file. You can configure your local settings by copying the provided example file:
 
-```bash
+\\\ash
 cp .env.example .env
-```
+\\\
 
-The config settings inside `.env.example` are:
+The config settings inside \.env.example\ are:
 
-```ini
+\\\ini
 # Database connection URL
 # Use localhost if running the FastAPI application locally outside of Docker
-# DATABASE_URL=postgresql+psycopg://postgres:dev@localhost:5432/tasks
+# DATABASE_URL=postgresql://localhost:5432/tasks
 
 # Use db as host when running the FastAPI application inside Docker Compose
-DATABASE_URL=postgresql+psycopg://postgres:dev@db:5432/tasks
-```
+DATABASE_URL=postgresql://db:5432/tasks
+
+# Supabase Auth Configuration
+SUPABASE_URL=your-supabase-url
+SUPABASE_KEY=your-supabase-key
+\\\
+
+## Authentication Flow
+
+### Sign Up
+\\\ash
+POST /auth/signup
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+\\\
+
+### Login
+\\\ash
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+\\\
+
+**Response:**
+\\\json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "token_string"
+}
+\\\
+
+### Accessing Protected Routes
+
+Include the Bearer token in the \Authorization\ header:
+
+\\\ash
+curl -H "Authorization: Bearer <access_token>" http://localhost:8000/protected/profile
+\\\
+
+### Logout
+\\\ash
+POST /auth/logout
+Authorization: Bearer <access_token>
+\\\
 
 ## API Endpoints Table
 
-| Endpoint | Method | Description | Request Body | Status Codes |
-|----------|--------|-------------|--------------|--------------|
-| `/` | `GET` | Return API metadata and available endpoints | None | `200 OK` |
-| `/health` | `GET` | Return health status of the service | None | `200 OK` |
-| `/tasks` | `GET` | Return list of all tasks in the database | None | `200 OK` |
-| `/tasks` | `POST` | Create a new task in the database | `{"title": "string"}` | `201 Created`, `400 Bad Request` |
-| `/tasks/{task_id}` | `GET` | Return a single task by ID | None | `200 OK`, `404 Not Found` |
-| `/tasks/{task_id}` | `PUT` | Update a task's title and/or done status | `{"title": "string", "done": bool}` | `200 OK`, `404 Not Found` |
-| `/tasks/{task_id}` | `DELETE` | Delete a task from the database by ID | None | `200 OK`, `404 Not Found` |
+| Endpoint | Method | Description | Auth Required | Status Codes |
+|----------|--------|-------------|----------------|--------------|
+| \/\ | \GET\ | Return API metadata | ❌ No | \200 OK\ |
+| \/health\ | \GET\ | Health status | ❌ No | \200 OK\ |
+| \/public/info\ | \GET\ | Public information | ❌ No | \200 OK\ |
+| \/auth/signup\ | \POST\ | Register new user | ❌ No | \201 Created\, \400 Bad Request\ |
+| \/auth/login\ | \POST\ | Login with email/password | ❌ No | \200 OK\, \400 Bad Request\ |
+| \/auth/logout\ | \POST\ | Logout (invalidate token) | ✅ **Yes** | \204 No Content\, \401 Unauthorized\ |
+| \/protected/profile\ | \GET\ | Get user profile | ✅ **Yes** | \200 OK\, \401 Unauthorized\ |
+| \/tasks\ | \GET\ | List all tasks | ❌ No | \200 OK\ |
+| \/tasks\ | \POST\ | Create new task | ❌ No | \201 Created\, \400 Bad Request\ |
+| \/tasks/{task_id}\ | \GET\ | Get task by ID | ❌ No | \200 OK\, \404 Not Found\ |
+| \/tasks/{task_id}\ | \PUT\ | Update task | ❌ No | \200 OK\, \404 Not Found\ |
+| \/tasks/{task_id}\ | \DELETE\ | Delete task | ❌ No | \200 OK\, \404 Not Found\ |
 
-## Example Curl Output
+## Swagger UI with Authorization
 
-To fetch the list of tasks from the running API:
+Once the API is running, access the interactive API docs with built-in authentication:
 
-```bash
-curl http://localhost:3000/tasks
-```
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
 
-Response Output:
-```json
-[
-  {
-    "id": 0,
-    "title": "Task 0",
-    "done": false
-  },
-  {
-    "id": 1,
-    "title": "Task 1",
-    "done": false
-  },
-  {
-    "id": 2,
-    "title": "Task 2",
-    "done": false
-  }
-]
-```
+### Using the Authorize Button in Swagger
 
-## Database Swagger UI & Data Screenshot
+1. Click the **🔒 Authorize** button at the top of the Swagger UI
+2. Paste your Bearer token (from login response) in the \Authorization\ field
+3. Click **Authorize** — subsequent requests will include the token automatically
+4. Protected routes will now execute with authentication
 
-Once the services are run, you can access the interactive API docs to view, execute requests, and inspect database state:
+## Example Requests
 
-- **Swagger UI**: http://localhost:3000/docs
-- **ReDoc**: http://localhost:3000/redoc
+### Sign Up
+\\\ash
+curl -X POST http://localhost:8000/auth/signup \\
+  -H "Content-Type: application/json" \\
+  -d '{"email":"user@example.com","password":"password123"}'
+\\\
 
-Below is the Swagger UI API documentation and data interaction screenshot:
+### Login
+\\\ash
+curl -X POST http://localhost:8000/auth/login \\
+  -H "Content-Type: application/json" \\
+  -d '{"email":"user@example.com","password":"password123"}'
+\\\
 
-![Swagger UI & Database Data Screenshot](swagger-ui.png)
+### Access Protected Route
+\\\ash
+curl http://localhost:8000/protected/profile \\
+  -H "Authorization: Bearer your_access_token_here"
+\\\
+
+**Response:**
+\\\
+Welcome! This info is protected.
+\\\
+
+### Logout
+\\\ash
+curl -X POST http://localhost:8000/auth/logout \\
+  -H "Authorization: Bearer your_access_token_here"
+\\\
+
+## Security Features
+
+✅ **HTTPBearer Security Scheme** — Swagger UI shows 🔒 padlock on protected routes  
+✅ **Bearer Token Validation** — Middleware validates \Authorization: Bearer <token>\ format  
+✅ **401 Unauthorized** — Missing, malformed, or invalid tokens return proper error  
+✅ **Reusable Guard** — Single \get_user()\ dependency protects multiple routes  
+✅ **Supabase Auth Integration** — Leverages Supabase for user management and token verification  
+
+## Architecture
+
+- **FastAPI** — Web framework with automatic OpenAPI/Swagger documentation
+- **SQLModel** — SQLAlchemy ORM with Pydantic validation
+- **PostgreSQL** — Persistent data store for tasks
+- **Supabase Auth** — User authentication and JWT token management
+- **HTTPBearer** — FastAPI security scheme for Bearer tokens
+- **Docker Compose** — Multi-container orchestration
