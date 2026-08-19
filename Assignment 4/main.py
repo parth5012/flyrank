@@ -6,6 +6,8 @@ from db.db import APISession
 from db.models import Task
 from db.operations import get_all_tasks, get_task_by_id
 from db.auth import sign_up, sign_in, sign_out
+import re
+from typing import Any
 
 
 @asynccontextmanager
@@ -104,6 +106,27 @@ def login(user:dict):
         return Response(status_code=400, content=response)
     except Exception as e:
         return Response(status_code=500, content=str(e))
+
+@app.get("/public/info")
+def public_info():
+    return Response(status_code=200, content="Welcome stranger! This info is public.")
+
+@app.get("/protected/profile")
+def protected_profile(headers: dict[Any,Any]):
+    auth_header: str = str(headers.get("Authorization", ""))
+    
+    # Regex: Match "Bearer <token>" and capture the token
+    match = re.match(r'^Bearer\s+(\S+)$', auth_header)
+    
+    if not match:
+        return Response(
+            status_code=401,
+            content='{"error": "Access token required"}',
+            media_type="application/json"
+        )
+    
+    token = match.group(1)  # Extract the token
+    return Response(status_code=200, content="Welcome! This info is protected.")
 
 if __name__ == "__main__":
     import uvicorn
