@@ -1,11 +1,14 @@
-"""Stage 1+2: catalogue discovery + raw detail records."""
+"""Stage 1+2+3: catalogue -> raw -> clean validated books.json (idempotent)."""
 import hashlib
 import json
 import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 from urllib.parse import urljoin, urlparse
+
+from pydantic import BaseModel, Field, HttpUrl, ValidationError, field_validator
 
 import requests
 from bs4 import BeautifulSoup
@@ -206,13 +209,63 @@ def fetch_details_simple(url_to_source: dict[str, str]) -> list[dict]:
         records.append(parse_detail(html, product_url, source_page))
     return records
 
+class BookRecord(BaseModel):
+    title: str = Field(min_length=1)
+    product_url: HttpUrl
+    price_text: str = Field(min_length=1)
+    price_gbp: float = Field(ge=0)
+    availability_text: str = Field(min_length=1)
+    rating_text: Optional[str] = Field(default=None)
+    description: Optional[str] = None
+    source_page: HttpUrl
+    fetched_at: str
+
+    @field_validator("rating_text")
+    @classmethod
+    def check_rating(cls, v):
+        if v is not None and v not in {"One", "Two", "Three", "Four", "Five"}:
+            raise ValueError(f"invalid rating {v}")
+        return v
+
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
+BOOKS_JSON = OUTPUT_DIR / "books.json"
+ERRORS_JSON = OUTPUT_DIR / "errors.json"
+
+def to_clean(raw: dict) -> dict:
+    m = re.search(r"[\d]+\.\d{2}", raw.get("price_text", ""))
+    price_gbp = float(m.group()) if m else None
+    return {**raw, "price_gbp": price_gbp}
+
+def validate_and_write(raw_records: list[dict]):
+    # dedup by canonical product_url
+    dedup: dict[str, dict] = {}
+    for r in raw_records:
+        dedup[r["product_url"]] = r  # last wins, counts once
+    good, errors = [], []
+    for url in sorted(dedup):
+        clean = to_clean(dedup[url])
+        try:
+            rec = BookRecord(**clean)
+            good.append(rec.model_dump(mode="json"))
+        except ValidationError as e:
+            errors.append({"product_url": url, "reason": e.errors(), "raw": clean})
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    # idempotent: overwrite, not append
+    BOOKS_JSON.write_text(json.dumps(good, indent=2, ensure_ascii=False), encoding="utf-8")
+    ERRORS_JSON.write_text(json.dumps(errors, indent=2, ensure_ascii=False), encoding="utf-8")
+    return good, errors
+
 def main():
     url_to_source = crawl_catalogue()
     records = fetch_details_simple(url_to_source)
-    # checkpoint
     if records:
         print(json.dumps(records[0], indent=2, ensure_ascii=False))
     print(f"detail_pages={len(records)}")
+    good, errors = validate_and_write(records)
+    print(f"books_json={len(good)} errors={len(errors)}")
+    # extra checkpoint line: validate numeric & https
+    assert all(isinstance(r["price_gbp"], (int, float)) for r in good)
+    assert all(str(r["product_url"]).startswith("https://") for r in good)
 
 if __name__ == "__main__":
     main()
