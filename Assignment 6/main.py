@@ -1,15 +1,21 @@
 ﻿from fastapi import FastAPI,Depends
 from fastapi.responses import Response
 from contextlib import asynccontextmanager
+from pydantic import ValidationError
 from db import create_db_and_tables, Session
 from db.db import APISession
 from db.models import Task
 from db.operations import get_all_tasks, get_task_by_id
 from db.auth import sign_up, sign_in, sign_out
+from llm.schema import ChatResponse,ChatRequest
 from utils.dependencies import get_user
 import re
-from typing import Any
+from config import Settings
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
+
+settings = Settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -120,6 +126,27 @@ def protected_profile(user = Depends(get_user)):
 def logout(user = Depends(get_user)):
     sign_out()
     return Response(status_code=204, content="")
+
+@app.post("/classify")
+@app.post("/chat")
+async def chat(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"detail": "Invalid JSON", "field": "text"})
+    try:
+        validated = ChatRequest(**data)
+    except ValidationError as e:
+        # name the failing field
+        field = e.errors()[0]["loc"][0] if e.errors() else "text"
+        return JSONResponse(status_code=400, content={"detail": e.errors(), "field": str(field)})
+    if settings.LLM_STUB:
+        stub = ChatResponse(category="other", urgency="normal", confidence=0.5, reason="Stub classification")
+        return JSONResponse(status_code=200, content=stub.model_dump())
+    # TODO: real LLM call (not needed for checkpoint)
+    stub = ChatResponse(category="other", urgency="normal", confidence=0.5, reason="Stub classification")
+    return JSONResponse(status_code=200, content=stub.model_dump())
+    
 
 if __name__ == "__main__":
     import uvicorn

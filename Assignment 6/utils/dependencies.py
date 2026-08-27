@@ -1,6 +1,6 @@
 ﻿import re
 from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials as HTTPAuthCredentials
 from db.auth import check_user
 
 security = HTTPBearer()
