@@ -8,11 +8,14 @@ from db.models import Task
 from db.operations import get_all_tasks, get_task_by_id
 from db.auth import sign_up, sign_in, sign_out
 from llm.schema import ChatResponse,ChatRequest
+from llm.utils import client
+from prompts.chat-v1 import SYSTEM_PROMPT
 from utils.dependencies import get_user
 import re
 from config import Settings
 from fastapi import Request
 from fastapi.responses import JSONResponse
+
 
 
 settings = Settings()
@@ -126,7 +129,6 @@ def protected_profile(user = Depends(get_user)):
 def logout(user = Depends(get_user)):
     sign_out()
     return Response(status_code=204, content="")
-
 @app.post("/classify")
 @app.post("/chat")
 async def chat(request: Request):
@@ -137,16 +139,28 @@ async def chat(request: Request):
     try:
         validated = ChatRequest(**data)
     except ValidationError as e:
-        # name the failing field
         field = e.errors()[0]["loc"][0] if e.errors() else "text"
         return JSONResponse(status_code=400, content={"detail": e.errors(), "field": str(field)})
+
     if settings.LLM_STUB:
         stub = ChatResponse(category="other", urgency="normal", confidence=0.5, reason="Stub classification")
         return JSONResponse(status_code=200, content=stub.model_dump())
-    # TODO: real LLM call (not needed for checkpoint)
-    stub = ChatResponse(category="other", urgency="normal", confidence=0.5, reason="Stub classification")
-    return JSONResponse(status_code=200, content=stub.model_dump())
-    
+
+    completion = client.beta.chat.completions.parse(
+        model=settings.LLM_MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": validated.text}
+        ],
+        response_format=ChatResponse,  # <- pydantic model enforces output shape
+    )
+
+    # handle refusal
+    if completion.choices[0].message.refusal:
+        return JSONResponse(status_code=500, content={"detail": completion.choices[0].message.refusal})
+
+    parsed: ChatResponse = completion.choices[0].message.parsed  # already validated
+    return JSONResponse(status_code=200, content=parsed.model_dump())
 
 if __name__ == "__main__":
     import uvicorn
