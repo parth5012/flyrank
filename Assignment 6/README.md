@@ -37,3 +37,7 @@ curl -X POST http://localhost:8000/classify -H "Content-Type: application/json" 
 
 Schema: `src/llm/schema.py` — `category`/`urgency` enums, `confidence 0-1`, `reason` max 256, `text` 1-2000 chars. Output file `llm/schema.py` is the source of truth.
 Stub: `LLM_STUB=1` skips model and returns hard-coded valid object. No OpenRouter call.
+
+## Resilience
+Retries: SDK `max_retries=0`; app retries 3x with 1s/2s/4s+jitter on timeout/429/5xx only, obeys Retry-After, never on 400/401/403; LLM timeout=30s.
+Kill switch: `LLM_ENABLED=false` returns 503 fallback immediately, zero model calls. Logs: `logs/llm_calls.jsonl` (prompt_version, model, input_tokens, output_tokens, duration_ms, repair) and `logs/quarantine.jsonl` on 422.

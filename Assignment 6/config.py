@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     LLM_API_KEY: str
     LLM_MODEL: str
     LLM_STUB: bool
+    LLM_ENABLED: bool = True
     
     DATABASE_URL: str
 
