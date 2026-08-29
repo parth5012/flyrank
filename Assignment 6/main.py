@@ -11,7 +11,11 @@ from llm.schema import ChatResponse,ChatRequest
 from llm.utils import client
 from prompts.chat-v1 import SYSTEM_PROMPT
 from utils.dependencies import get_user
+from utils.parse import format_json
 import re
+import json
+import pathlib
+import datetime
 from config import Settings
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -146,21 +150,65 @@ async def chat(request: Request):
         stub = ChatResponse(category="other", urgency="normal", confidence=0.5, reason="Stub classification")
         return JSONResponse(status_code=200, content=stub.model_dump())
 
-    completion = client.beta.chat.completions.parse(
+    def _parse_and_validate(raw: str):
+        """Step 1+2: strip fence via format_json, JSON.parse, Pydantic validate."""
+        extracted = format_json(raw)
+        obj = json.loads(extracted)
+        return ChatResponse.model_validate(obj)
+
+    def _quarantine(raw: str, raw2: str | None, error: str):
+        pathlib.Path("logs").mkdir(parents=True, exist_ok=True)
+        log = {
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "input": validated.text,
+            "raw_output": raw,
+            "second_raw": raw2,
+            "error": error,
+            "prompt_version": "chat-v1",
+        }
+        with open("logs/quarantine.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(log) + "\n")
+
+    # --- first attempt (raw text, not beta.parse, to exercise fence-stripping) ---
+    completion = client.chat.completions.create(
         model=settings.LLM_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": validated.text}
+            {"role": "user", "content": validated.text},
         ],
-        response_format=ChatResponse,  # <- pydantic model enforces output shape
     )
+    raw = completion.choices[0].message.content or ""
 
-    # handle refusal
-    if completion.choices[0].message.refusal:
-        return JSONResponse(status_code=500, content={"detail": completion.choices[0].message.refusal})
-
-    parsed: ChatResponse = completion.choices[0].message.parsed  # already validated
-    return JSONResponse(status_code=200, content=parsed.model_dump())
+    try:
+        parsed = _parse_and_validate(raw)
+        return JSONResponse(status_code=200, content=parsed.model_dump())
+    except Exception as e1:
+        err1 = str(e1)
+        if isinstance(e1, ValidationError):
+            err1 = str(e1.errors())
+        # --- Step 3: repair once ---
+        try:
+            repair = client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": validated.text},
+                    {"role": "assistant", "content": raw},
+                    {"role": "user", "content": f"Your previous answer was rejected for this reason: {err1}. Return only corrected JSON matching the schema."},
+                ],
+            )
+            raw2 = repair.choices[0].message.content or ""
+            try:
+                parsed2 = _parse_and_validate(raw2)
+                return JSONResponse(status_code=200, content=parsed2.model_dump())
+            except Exception as e2:
+                err2 = str(e2.errors()) if isinstance(e2, ValidationError) else str(e2)
+                _quarantine(raw, raw2, err2)
+                return JSONResponse(status_code=422, content={"detail": "Validation failed", "error": err2})
+        except Exception as e2:
+            err2 = str(e2)
+            _quarantine(raw, None, err2)
+            return JSONResponse(status_code=422, content={"detail": "Validation failed", "error": err2})
 
 if __name__ == "__main__":
     import uvicorn
