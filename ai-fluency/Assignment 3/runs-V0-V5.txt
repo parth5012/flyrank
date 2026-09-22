@@ -1,0 +1,7 @@
+V0 prompt: Write backend code for email triage.
+V1 prompt: + clearer goal (3 labels + reason)
+V2 prompt: + real context (Python 3.11, Gmail API, messy inbox)
+V3 prompt: + output format (triage.py + run steps + table)
+V4 prompt: + constraints (label-only, error handling, env creds)
+V5 prompt: + verification (5 messy tests + self-check)
+All outputs excerpted verbatim in PDF; full runs generated 2026-09-22.
