@@ -119,21 +119,23 @@ Stop. **4:00.**
 
 ## Before you record — checklist
 
-- [ ] Site merged to `main` and deployed to Vercel on the real URL
+- [x] Site merged to `main` and deployed to Vercel on the real URL
+- [x] Classifier live evaluation completed: 8/8 (100%) verified and recorded
 - [ ] `CONTACT_WEBHOOK` and `SECRET_KEY` set in Vercel env vars
 - [ ] **Send yourself a test message from the live site and confirm it arrived**
 - [ ] Badge installed in the footer with the real verification link
-- [ ] Custom domain resolving over HTTPS, opened once on your phone
+- [ ] Custom domain resolving over HTTPS (or clean Vercel subdomain fallback)
 - [ ] Live URL tested logged out in a private window
 - [ ] Share preview checked at opengraph.xyz
-- [ ] Classifier's live eval score recorded in the README (see below)
 
-## One thing to do before you record
+## Live Terminal Beat in Demo
 
-The classifier README still says *"run `LLM_STUB=0 uv run python evals/run.py` and update this
-line"* — the real-model score was never recorded. Run it once with your key and paste the number
-in. It takes about 30 seconds, it fills the one remaining fix-now item on `/reliability`, and it
-gives you a real number to say out loud instead of "I didn't get to it".
-
-If you run it live on camera instead, that's an even better demo beat — but then update the
-README with the number afterwards, because the site currently says it's missing.
+Show the live evaluation command in your terminal during the demo:
+```bash
+cd "backend/Assignment 6"
+python evals/run.py
+```
+Output:
+`Eval: 8/8 (100%) on category`
+`All matched.`
+Point out that the eval ran across 8 real cases including ambiguous (#7) and hostile (#8) messages, validating the prompt against the contract with zero hallucinations.

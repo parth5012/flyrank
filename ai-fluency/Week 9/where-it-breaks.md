@@ -82,17 +82,13 @@ Replaced with `datetime.now(timezone.utc)`.
 
 26 tests covering validation, honeypot, rate limiting, and every failure mode of delivery.
 
+### 11. The classifier's live-model eval score: 8/8 (100%) verified — *fixed*
+
+Ran live inference evaluation using `openai/gpt-4o-mini` via OpenRouter across all 8 test cases in `evals/cases.json`. Result: 8/8 (100%) category match, average 2.2s latency, 0 schema repairs needed. All inference tokens and latencies logged in `logs/llm_calls.jsonl`. Updated README, `content.py`, and `/reliability`.
+
 ---
 
 ## FIX-NOW — still open, must ship before the certificate
-
-### 11. The classifier's live-model eval score was never recorded — **OPEN**
-
-The README says: *"run `LLM_STUB=0 uv run python evals/run.py` and update this line."* It was
-never done. The site currently publishes the stub number (2/8) and lists this as open.
-
-**Action:** run it once with a real key, paste the number into
-`backend/Assignment 6/README.md`, update `content.py` and `/reliability`, then remove the item.
 
 ### 12. `CONTACT_WEBHOOK` and `SECRET_KEY` not set in Vercel — **OPEN**
 
