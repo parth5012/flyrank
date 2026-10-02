@@ -60,7 +60,7 @@ Cases: `evals/cases.json` (8 inputs: 5 clear, 1 ambiguous #7, 1 hostile #8, 1 ur
 Run: `uv run python evals/run.py` (hits `POST /classify` 8 times → prints `X/8`)
 
 With `LLM_STUB=1`: **2/8 (25%)** — only the two `other` cases (#7, #8) match; stub always returns `other` by design (zero model calls, no budget spent).
-With real model (`openai/gpt-4o-mini` via OpenRouter, 2026-08-29): run `LLM_STUB=0 uv run python evals/run.py` and update this line. Budget: 8 calls/run × 2 runs = 16/50 daily free calls.
+With real model (`openai/gpt-4o-mini` via OpenRouter, 2026-10-02): **8/8 (100%)** on category. All 8 cases matched (5 clear, 1 ambiguous #7, 1 hostile #8, 1 urgency check #4). Budget: 8 calls/run = 8/50 daily free calls. Average latency: ~2.2s. Output schema validation: 0 repairs needed.
 
 ## Cost log
 
